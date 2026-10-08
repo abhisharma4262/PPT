@@ -267,7 +267,9 @@
           } else if (tag === 'text') {
             const tcs = getComputedStyle(el);
             const n = el.getNumberOfChars();
-            const txt = el.textContent;
+            // SVG collapses runs of whitespace before laying out characters; match that so the
+            // character index lines up with getStartPositionOfChar (double spaces used to drop letters)
+            const txt = el.textContent.replace(/\s+/g, ' ').trim();
             const fs = px(tcs.fontSize);
             const f = fontOf(tcs);
             const col = parseColor(tcs.fill);

@@ -7,12 +7,13 @@ This folder holds the files the skill uses.
 | Folder | What it is |
 |---|---|
 | `template/Myridius_Template_2026.pptx` | The 2026 template: cover, content sample, divider, end slide (keep this order) |
-| `tools/mkit.py` | HTML slide kit: palette, header at template positions, icons, ring and arc helpers |
+| `tools/mkit.py` | HTML slide kit: palette, header at template positions, icons (house size and thin stroke by default), `banner()`, `dot_list()`, `legend()`, ring and arc helpers |
 | `tools/html2pptx.py` | HTML deck to editable PPTX (shapes, text boxes, native SVG icons) |
 | `tools/merge_into_template.py` | Puts the slides into the template with cover, dividers, end slide, logo and page numbers |
+| `tools/insert_slides.py` | Adds, replaces or patches slides in a deck you have already edited, without rebuilding it |
 | `tools/lint_text.py` | Flags em dashes, emojis, hype words, long titles, and statistics on request |
 | `tools/render_qa.py` | Renders every slide and a contact sheet for review |
-| `examples/example_deck.py` | Three slide patterns, end to end |
+| `examples/example_deck.py` | Four slide patterns, end to end (including the client stories caselet) |
 | `SKILL.md` | Copy of the skill text, for versioning or packaging as a plugin later |
 
 ## How to use it
@@ -48,6 +49,9 @@ python3 ../tools/html2pptx.py example.html example_raw.pptx "Example deck"
 python3 ../tools/merge_into_template.py example_raw.pptx example_final.pptx --kicker "Discussion with Client" --title "Myridius|Example proposal" --date "October 2026" --divider "Appendix@3"
 python3 ../tools/lint_text.py example_final.pptx
 python3 ../tools/render_qa.py example_final.pptx qa
+
+# add new slides to a deck you have edited, after slide 8
+python3 ../tools/insert_slides.py my_deck.pptx new_raw.pptx my_deck_updated.pptx --after 8 --take 1,2
 ```
 Needs Python 3 with python-pptx, playwright (Chromium) and Pillow; Node with pptxgenjs and sharp
 (`npm install pptxgenjs sharp` inside `tools`); LibreOffice and poppler for rendering.

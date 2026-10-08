@@ -22,20 +22,33 @@ MINT, PULSE, SAGE, BEIGE = '#D2F0C6', '#52E081', '#CBEBBD', '#F6F3F0'
 WHITE = '#FFFFFF'
 
 # ---------------------------------------------------------------- icons
-def icon(name, size=22, color=LEAF, sw=1.9):
-    """Inline SVG icon (exports as an editable SVG picture)."""
-    return (f'<svg class="ic" width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" '
-            f'stroke-width="{sw}" stroke-linecap="round" stroke-linejoin="round">{IC[name]}</svg>')
+# House style (from the deck owner's own edits): the glyph fills about three quarters of its round
+# tile and the line is thin, about 1/2 to 3/4 pt whatever the icon size. Dark teal (Leaf) on mint
+# tiles, Pulse on dark tiles. Pass sw only when a slide needs something different.
+STROKE_PT = 0.75       # rendered stroke width in points (1 pt = 2 px on the canvas)
+ICON_RATIO = 0.72      # glyph size relative to its round tile
 
-def ico(name, v='lt', size=40, isz=None, sw=1.9):
-    """Icon inside a round tile. v: lt (mint tile), dk (moss tile), lf (leaf tile), pu (pulse tile), ol (outline), wh (white)."""
-    isz = isz or int(size * 0.5)
-    col = {'lt': MOSS, 'dk': PULSE, 'ol': MOSS, 'lf': MINT, 'pu': MOSS, 'wh': MOSS}[v]
+def _sw(size):
+    """viewBox stroke width that renders at STROKE_PT for an icon drawn at `size` px."""
+    return STROKE_PT * 2 * 24 / size
+
+def icon(name, size=22, color=LEAF, sw=None):
+    """Inline SVG icon (exports as an editable SVG picture). sw is in viewBox units (24 grid)."""
+    sw = _sw(size) if sw is None else sw
+    return (f'<svg class="ic" width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" '
+            f'stroke-width="{sw:.2f}" stroke-linecap="round" stroke-linejoin="round">{IC[name]}</svg>')
+
+def ico(name, v='lt', size=40, isz=None, sw=None):
+    """Icon inside a round tile. v: lt (mint tile), dk (moss tile), lf (leaf tile), pu (pulse tile), ol (outline), wh (white).
+    Size the tile to the need (40 to 76 px is typical); the glyph follows at ICON_RATIO."""
+    isz = isz or int(round(size * ICON_RATIO))
+    col = {'lt': LEAF, 'dk': PULSE, 'ol': LEAF, 'lf': MINT, 'pu': MOSS, 'wh': LEAF}[v]
     return f'<span class="ico {v}" style="width:{size}px;height:{size}px">{icon(name, isz, col, sw)}</span>'
 
-def gicon(name, cx, cy, size=22, color=MOSS, sw=1.9):
-    """Icon inside an SVG layer, centred on (cx, cy)."""
+def gicon(name, cx, cy, size=22, color=MOSS, sw=None):
+    """Icon inside an SVG layer, centred on (cx, cy). sw is the rendered stroke in canvas px."""
     s = size / 24
+    sw = STROKE_PT * 2 if sw is None else sw
     return (f'<g transform="translate({cx-size/2:.1f},{cy-size/2:.1f}) scale({s:.4f})" fill="none" stroke="{color}" '
             f'stroke-width="{sw/s:.2f}" stroke-linecap="round" stroke-linejoin="round">{IC[name]}</g>')
 
@@ -63,6 +76,30 @@ def header(eyebrow, title, sub=None, accent=None, two_line=False):
     if sub:
         o.append(f'<p class="sub{" s2" if two_line else ""}">{sub}</p>')
     return '\n'.join(o)
+
+# ---------------------------------------------------------------- text and band helpers
+def banner(x, y, w, h, ic, label, msg='', fs=21):
+    """Takeaway band (dark Leaf strip). Order is always: icon, then the label, then the message."""
+    m = f'<span style="font-size:{fs}px;white-space:normal;margin-left:10px">{msg}</span>' if msg else ''
+    return (f'<div class="band" style="left:{x}px;top:{y}px;width:{w}px;height:{h}px;padding:0 30px;gap:16px">'
+            f'{icon(ic, 30, PULSE)}<span class="lbl" style="color:var(--pulse);font-size:16px">{label}</span>{m}</div>')
+
+def dot_list(items, size=19, gap=10, color=None):
+    """Bulleted list with teal dots. Use this instead of <ul>/<li>: list markers are lost in the PPTX export."""
+    c = f';color:{color}' if color else ''
+    return ''.join(f'<div class="sli" style="font-size:{size}px;margin-bottom:{gap}px{c}"><span class="dot"></span><span>{t}</span></div>'
+                   for t in items)
+
+def tick_list(items, size=20, gap=12, color=TEAL):
+    """List with a thin check icon before each item."""
+    return ''.join(f'<div class="tick" style="font-size:{size}px;margin-bottom:{gap}px">{icon("check", 22, color)}<span>{t}</span></div>'
+                   for t in items)
+
+def legend(x, y, items):
+    """Ownership key, e.g. legend(59, 206, [('dk', 'Myridius'), ('lt', 'Client and partners')])."""
+    parts = ''.join(f'<span style="display:flex;align-items:center;gap:8px"><span class="sw {k}"></span>{t}</span>' for k, t in items)
+    return (f'<div style="left:{x}px;top:{y}px;display:flex;align-items:center;gap:22px;'
+            f'font:400 16px/1 var(--f);color:var(--slate)">{parts}</div>')
 
 # ---------------------------------------------------------------- geometry helpers
 def arc_c(cx, cy, r, t0, t1):
@@ -162,6 +199,11 @@ h1.title.t2{white-space:normal}
 .num{width:44px;height:44px;border-radius:50%;border:2px solid var(--moss);display:flex;align-items:center;justify-content:center;font:700 20px/1 var(--f);color:var(--moss);background:#fff}
 .tick{display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;font:400 20px/1.4 var(--f);color:var(--leaf)}
 .tick svg{margin-top:4px}
+.sli{display:flex;gap:12px;align-items:flex-start;font-weight:400;line-height:1.4;color:var(--leaf)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--teal);flex:none;margin-top:.55em;display:inline-block}
+.sw{width:18px;height:18px;border-radius:4px;display:inline-block}
+.sw.dk{background:var(--moss)} .sw.lt{background:var(--m04);border:1.5px solid var(--m16)}
+.sw>*,.band>*{position:static}
 .arct{font-family:var(--f);font-weight:700;letter-spacing:5px}
 '''
 

@@ -1,5 +1,5 @@
 """
-Example: three common Myridius slide patterns built with mkit, then exported and merged into the template.
+Example: four common Myridius slide patterns built with mkit, then exported and merged into the template.
 
   cd examples
   python3 example_deck.py                                  # writes example.html
@@ -40,15 +40,15 @@ def s_options():
         if L == 'C':
             for k, a0 in enumerate((180, 270, 0, 90)):
                 s.append(f'<path d="{seg_path(cx, cy, 78, 50, a0 + 3, a0 + 87)}" fill="{MINT}"/>')
-            s.append(f'<circle cx="{cx}" cy="{cy}" r="40" fill="{PULSE}"/>' + gicon('agent', cx, cy, 38, MOSS, 2))
+            s.append(f'<circle cx="{cx}" cy="{cy}" r="40" fill="{PULSE}"/>' + gicon('agent', cx, cy, 44, MOSS))
         elif L == 'B':
-            s.append(f'<rect x="{cx-60:.0f}" y="{cy-70}" width="120" height="140" rx="14" fill="{MOSS}"/>' + gicon('cloud', cx, cy, 40, PULSE, 2))
+            s.append(f'<rect x="{cx-60:.0f}" y="{cy-70}" width="120" height="140" rx="14" fill="{MOSS}"/>' + gicon('cloud', cx, cy, 46, PULSE))
             for dy in (-40, 0, 40):
                 s.append(f'<path d="M{cx-150:.0f},{cy+dy} L{cx-68:.0f},{cy+dy}" stroke="{LEAF}" stroke-width="2.4" marker-end="url(#ahl)"/>')
                 s.append(f'<path d="M{cx+64:.0f},{cy+dy} L{cx+146:.0f},{cy+dy}" stroke="{LEAF}" stroke-width="2.4" marker-end="url(#ahl)"/>')
         else:
             for k, dx in enumerate((-110, 0, 110)):
-                s.append(f'<circle cx="{cx+dx:.0f}" cy="{cy-20}" r="34" fill="{MINT}"/>' + gicon('person', cx + dx, cy - 20, 32, MOSS, 2))
+                s.append(f'<circle cx="{cx+dx:.0f}" cy="{cy-20}" r="34" fill="{MINT}"/>' + gicon('person', cx + dx, cy - 20, 40, MOSS))
                 dash = ['', ' stroke-dasharray="7 5"', ' stroke-dasharray="1.5 6" stroke-linecap="round"'][k]
                 s.append(f'<path d="M{cx+dx:.0f},{cy+18} L{cx+dx:.0f},{cy+70}" stroke="{LEAF}" stroke-width="2.4"{dash}/>')
     o.append(svg(''.join(s)))
@@ -94,17 +94,52 @@ def s_process():
         pts = [(x, y0), (x + w - 30, y0), (x + w, y0 + H / 2), (x + w - 30, y0 + H), (x, y0 + H)] + ([(x + 30, y0 + H / 2)] if i else [])
         s.append('<path d="M' + ' L'.join(f'{px:.0f},{py:.0f}' for px, py in pts) + f' Z" fill="{fill}"/>')
         o.append(f'<div class="stg" style="left:{x + (48 if i else 30):.0f}px;top:{y0 + 40}px;width:{w - 110:.0f}px">'
-                 f'{ico(ic, "pu", 52)}<div class="sn">0{i+1}</div><div class="st">{t}</div><div class="sd">{d}</div></div>')
+                 f'{ico(ic, "pu", 56)}<div class="sn">0{i+1}</div><div class="st">{t}</div><div class="sd">{d}</div></div>')
     for gx, lab in ((x0 + w + 9, 'Human sign-off'), (x0 + 2 * (w + 18) - 9, 'Human sign-off')):
         o.append(f'<span class="tag" style="left:{gx-80:.0f}px;top:{y0-22}px">{lab}</span>')
     o.insert(1, svg(''.join(s)))   # backgrounds go beneath the HTML text
-    o.append(f'<div class="band" style="left:59px;top:600px;width:1801px;height:84px"><span class="lbl" style="color:var(--pulse)">Always on</span>'
-             f'{icon("shield", 26, PULSE, 2)}<span><b>Guardrails</b> hard limits</span>{icon("evals", 26, PULSE, 2)}<span><b>Evals</b> every output scored</span>'
-             f'{icon("person", 26, PULSE, 2)}<span><b>Human gates</b> people sign off</span>{icon("book", 26, PULSE, 2)}<span><b>Audit trail</b> every step recorded</span></div>')
+    o.append(banner(59, 600, 1801, 84, 'shield', 'Always on',
+                    '<b>Guardrails</b> hard limits  \u00b7  <b>Evals</b> every output scored  \u00b7  <b>Human gates</b> people sign off  \u00b7  <b>Audit trail</b> every step recorded'))
     outs = [('parity', 'Business rules proven at parity'), ('shield', 'Client standards enforced at every gate'), ('book', 'Evidence ready for audit')]
     o.append('<div class="lbl" style="left:59px;top:732px">What it drives</div>')
     for i, (ic, t) in enumerate(outs):
         o.append(f'<div class="out" style="left:{59 + i*610}px;top:780px;width:582px;height:104px">{ico(ic, "lt", 52)}<span>{t}</span></div>')
+    return '\n'.join(o)
+
+# ------------------------------------------------------------------ 4. client stories (the deck owner's caselet template)
+def s_caselets():
+    o = [header('Client stories (1/2)', 'We have built AI knowledge assistants at enterprise scale',
+                'Selected engagements relevant to this client', accent='at enterprise scale')]
+    cases = [dict(client='Multinational financial services company', name='Knowledge Assistant', icon='book',
+                  situation='Client advisors ran <b>millions of searches a year</b> across policy and procedure documents',
+                  solution=['Generative AI assistant for <b>advisor questions</b>', 'Answers to <b>complex policy queries</b>', '<b>Faster ramp-up</b> for new joiners'],
+                  outcomes=['Placeholder outcome with a sourced number', 'Second outcome', 'Third outcome'], tags=['A1 Knowledge foundation']),
+             dict(client='Large field service provider', name='Technician in My Pocket', icon='tools',
+                  situation='Know-how was <b>trapped in PDFs</b>; repairs and ramp-up were slow',
+                  solution=['Indexed manuals into a <b>governed corpus</b>', 'AI app guiding <b>diagnosis and repair</b>', '<b>SME curation</b> with a feedback loop'],
+                  outcomes=['Placeholder outcome', 'Second outcome', 'Third outcome'], tags=['A1 Knowledge foundation']),
+             dict(client='Regional bank', name='Customer 360', icon='db',
+                  situation='Core banking data was <b>fragmented across systems</b>',
+                  solution=['Ingestion framework for <b>all core data</b>', 'One <b>Customer 360</b> view', 'Data ready for <b>analytics</b>'],
+                  outcomes=['Placeholder outcome', 'Second outcome'], tags=['B3 Connected journeys'])]
+    LX, CX0 = 59, 230
+    cw = (1860 - CX0 - 2 * 36) / 3
+    for lab, y in (('Client situation', 238), ('Our solution', 396), ('Outcomes', 704)):
+        o.append(f'<div class="rl" style="left:{LX}px;top:{y}px;width:150px">{lab}</div>')
+    for i, c in enumerate(cases):
+        x = CX0 + i * (cw + 36)
+        if i:
+            o.append(f'<div style="left:{x - 19:.0f}px;top:206px;width:1.5px;height:720px;background:var(--m16)"></div>')
+        o.append(f'<div class="cname" style="left:{x:.0f}px;top:200px;width:{cw:.0f}px">{c["client"]}</div>')
+        o.append(f'<div class="ctext" style="left:{x:.0f}px;top:238px;width:{cw:.0f}px">{c["situation"]}</div>')
+        o.append(f'<div class="solbox" style="left:{x:.0f}px;top:396px;width:{cw:.0f}px;height:290px">'
+                 f'<div class="flow" style="left:22px;top:20px;right:18px"><div style="display:flex;align-items:center;gap:12px">{ico(c["icon"], "dk", 44)}'
+                 f'<span style="font:700 21px/1.2 var(--f);color:var(--leaf)">{c["name"]}</span></div>'
+                 f'<div style="margin-top:16px">{dot_list(c["solution"], 18)}</div></div></div>')
+        outs = ''.join(f'<div class="oline">{icon("check", 20, PULSE)}<span>{t}</span></div>' for t in c['outcomes'])
+        o.append(f'<div class="outbox" style="left:{x:.0f}px;top:704px;width:{cw:.0f}px;height:150px"><div class="flow" style="left:22px;top:18px;right:18px">{outs}</div></div>')
+        o.append(f'<div style="left:{x:.0f}px;top:872px;width:{cw:.0f}px;display:flex;gap:8px;flex-wrap:wrap">'
+                 + ''.join(f'<span class="chip" style="font-size:15px;padding:6px 12px">{t}</span>' for t in c['tags']) + '</div>')
     return '\n'.join(o)
 
 EXTRA = r'''
@@ -132,10 +167,18 @@ EXTRA = r'''
 .stg .sd{font:400 20px/1.35 var(--f);color:var(--mint);margin-top:8px}
 .band{font-size:21px;gap:14px}
 .band span{white-space:nowrap}
+.flow{position:absolute} .flow *{position:static}
+.rl{font:700 16px/1.3 var(--f);letter-spacing:.1em;text-transform:uppercase;color:var(--slate)}
+.cname{font:italic 400 19px/1.3 var(--f);color:var(--slate)}
+.ctext{font:400 19px/1.45 var(--f);color:var(--leaf)}
+.solbox{border-radius:14px;background:var(--m04);border:1.5px solid var(--m10)}
+.outbox{border-radius:14px;background:var(--moss)}
+.oline{display:flex;gap:12px;align-items:flex-start;margin-bottom:10px;font:400 19px/1.35 var(--f);color:#fff}
+.oline svg{margin-top:3px;flex:none}
 .out{display:flex;align-items:center;gap:18px;padding:0 24px;border-radius:16px;border:1.5px solid var(--m16);background:#fff;font:700 23px/1.25 var(--f);color:var(--leaf)}
 '''
 
 if __name__ == '__main__':
     here = os.path.dirname(os.path.abspath(__file__))
-    write_deck(os.path.join(here, 'example.html'), [s_options(), s_grid(), s_process()], EXTRA, 'Example deck')
+    write_deck(os.path.join(here, 'example.html'), [s_options(), s_grid(), s_process(), s_caselets()], EXTRA, 'Example deck')
     print('ok')
