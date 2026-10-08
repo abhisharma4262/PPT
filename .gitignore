@@ -1,0 +1,12 @@
+# generated while building or checking decks
+__pycache__/
+*.pyc
+node_modules/
+*_qa/
+qa/
+examples/example.html
+examples/*.pptx
+*.svgs.json
+~$*
+.DS_Store
+Thumbs.db
