@@ -26,7 +26,7 @@ for name in list(files):
         return re.sub(r'<a:blip r:embed="(rId\d+)"></a:blip>',
             lambda b: f'<a:blip r:embed="{b.group(1)}"><a:extLst><a:ext uri="{{96DAC541-7B7A-43D3-8B79-37D633B846F1}}"><asvg:svgBlip xmlns:asvg="http://schemas.microsoft.com/office/drawing/2016/SVG/main" r:embed="{rid}"/></a:ext></a:extLst></a:blip>', body, count=1)
     nonlocal_rels = []
-    xml = re.sub(r'<p:pic>\s*<p:nvPicPr><p:cNvPr id="\d+" name="(svgicon-\d+)".*?</p:pic>', rep, xml, flags=re.S)
+    xml = re.sub(r'<p:pic>\s*<p:nvPicPr><p:cNvPr id="\d+" name="(svgicon-\d+)[^"]*".*?</p:pic>', rep, xml, flags=re.S)
     rels = rels.replace('</Relationships>', ''.join(nonlocal_rels) + '</Relationships>')
     files[name] = xml.encode(); files[relsn] = rels.encode()
 order = ['[Content_Types].xml'] + [n for n in files if n != '[Content_Types].xml']

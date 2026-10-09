@@ -53,6 +53,7 @@ function roundedPoints(w, h, r) { // w,h,r in inches; r=[tl,tr,br,bl]
         if (w <= 0 || h <= 0) continue;
         const base = { x: IN(it.x), y: IN(it.y), w, h, fill: fillOpt(it.fill), line: lineOpt(it.line) };
         if (it.name) base.objectName = it.name;
+        if (it.gn) base.objectName = (base.objectName ? base.objectName + '~' : 'Shape~') + it.gn;
         if (it.shadow) base.shadow = { type: 'outer', color: it.shadow.color, opacity: Math.min(1, it.shadow.a * 1.6), blur: PT(it.shadow.blur), offset: PT(Math.max(0, it.shadow.oy)), angle: 90 };
         if (!base.fill) base.fill = { type: 'none' };
         const r = it.radii || [0, 0, 0, 0];
@@ -63,9 +64,11 @@ function roundedPoints(w, h, r) { // w,h,r in inches; r=[tl,tr,br,bl]
       } else if (it.t === 'circle') {
         const o = { x: IN(it.cx - it.r), y: IN(it.cy - it.r), w: IN(2 * it.r), h: IN(2 * it.r),
           fill: it.fill ? fillOpt(it.fill) : { type: 'none' }, line: lineOpt(it.stroke) };
+        if (it.gn) o.objectName = 'Oval~' + it.gn;
         slide.addShape(pres.shapes.OVAL, o);
       } else if (it.t === 'rrect') {
         const o = { x: IN(it.x), y: IN(it.y), w: IN(it.w), h: IN(it.h), fill: it.fill ? fillOpt(it.fill) : { type: 'none' }, line: lineOpt(it.stroke) };
+        if (it.gn) o.objectName = 'Rect~' + it.gn;
         if (it.rx > 0) slide.addShape(pres.shapes.ROUNDED_RECTANGLE, Object.assign(o, { rectRadius: IN(it.rx) }));
         else slide.addShape(pres.shapes.RECTANGLE, o);
       } else if (it.t === 'path') {
@@ -87,19 +90,21 @@ function roundedPoints(w, h, r) { // w,h,r in inches; r=[tl,tr,br,bl]
         const o = { x: IN(x0), y: IN(y0), w: IN(x1 - x0), h: IN(y1 - y0), points: pts,
           fill: it.fill ? fillOpt(it.fill) : { type: 'none' },
           line: lineOpt(it.stroke, it.arrow ? { endArrowType: 'triangle' } : null) };
+        if (it.gn) o.objectName = 'Path~' + it.gn;
         slide.addShape(pres.shapes.CUSTOM_GEOMETRY, o);
       } else if (it.t === 'photo') {
         slide.addImage({ path: it.src, x: IN(it.x), y: IN(it.y), w: IN(it.w), h: IN(it.h), objectName: `shot-r${(it.radius||0).toFixed(1)}-${(it.w).toFixed(1)}-${(it.h).toFixed(1)}`, altText: 'AEO screenshot' });
       } else if (it.t === 'img') {
         iconN++;
-        const name = `svgicon-${iconN}`;
+        const base = `svgicon-${iconN}`;
+        const name = base + (it.gn ? '~' + it.gn : '');
         const svg = it.svg.includes('xmlns=') ? it.svg : it.svg.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"');
         const png = await sharp(Buffer.from(svg), { density: 72 * 8 }).png().toBuffer();
-        svgs[name] = svg;
+        svgs[base] = svg;
         slide.addImage({ data: 'image/png;base64,' + png.toString('base64'), x: IN(it.x), y: IN(it.y), w: IN(it.w), h: IN(it.h), objectName: name, altText: 'icon' });
       } else if (it.t === 'char') {
         const s = it.size * 1.7;
-        slide.addText(it.ch, { x: IN(it.cx - s / 2), y: IN(it.cy - s / 2), w: IN(s), h: IN(s), rotate: it.rot,
+        slide.addText(it.ch, { objectName: it.gn ? 'Char~' + it.gn : undefined, x: IN(it.cx - s / 2), y: IN(it.cy - s / 2), w: IN(s), h: IN(s), rotate: it.rot,
           fontFace: it.face, bold: it.bold, fontSize: PT(it.size), color: it.color, transparency: tr(it.alpha),
           align: 'center', valign: 'middle', margin: 0, wrap: false, isTextBox: true, fit: 'none' });
       } else if (it.t === 'text') {
@@ -110,6 +115,9 @@ function roundedPoints(w, h, r) { // w,h,r in inches; r=[tl,tr,br,bl]
           if (r.alpha < 0.999) o.transparency = tr(r.alpha);
           if (r.spacing) o.charSpacing = PT(r.spacing);
           if (r.hl) o.highlight = 'A8EFC0';
+          if (r.strike) o.strike = 'sngStrike';
+          if (r.link) { o.hyperlink = { url: r.link }; o.underline = { style: 'sng', color: r.color }; }
+          else if (r.underline) o.underline = { style: 'sng' };
           runs.push({ text: r.text, options: o });
         }
         if (!runs.length) continue;
@@ -128,6 +136,7 @@ function roundedPoints(w, h, r) { // w,h,r in inches; r=[tl,tr,br,bl]
           opts.valign = 'top'; opts.lineSpacing = PT(it.lh);
         }
         if (it.name) opts.objectName = it.name;
+        if (it.gn) opts.objectName = (opts.objectName ? opts.objectName + '~' : 'Text~') + it.gn;
         slide.addText(runs, Object.assign(opts, { x: IN(x), y: IN(y), w: IN(w), h: IN(h) }));
       }
     }

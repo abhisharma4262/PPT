@@ -5,6 +5,8 @@ Build the new slides with mkit and html2pptx as usual (raw.pptx), then:
 
   # add raw slides 1-3 right after slide 8 of the user's deck (they take slide 8's layout)
   python3 insert_slides.py deck.pptx raw.pptx out.pptx --after 8 --take 1,2,3
+  # after a divider, borrow the layout of a content slide instead (--like 4)
+  python3 insert_slides.py deck.pptx raw.pptx out.pptx --after 2 --like 4 --take 1
 
   # replace everything on slide 5 with raw slide 1 (keeps slide 5's layout, logo and page number)
   python3 insert_slides.py deck.pptx raw.pptx out.pptx --replace 5:1
@@ -41,6 +43,7 @@ def main():
     ap.add_argument('deck'); ap.add_argument('raw'); ap.add_argument('out')
     ap.add_argument('--after', type=int, help='insert the --take slides after this deck slide')
     ap.add_argument('--take', default='', help='raw slide numbers to insert, e.g. 1,2,3')
+    ap.add_argument('--like', type=int, help='deck slide whose layout new slides should use (default: the --after slide)')
     ap.add_argument('--replace', action='append', default=[], help='N:k  replace deck slide N content with raw slide k')
     ap.add_argument('--region', action='append', default=[], help='N:k:y0:y1  replace shapes on deck slide N whose top is in [y0,y1) px')
     ap.add_argument('--delete', default='', help='deck slide numbers to delete at the end')
@@ -67,7 +70,7 @@ def main():
         renumber_ids(s)
 
     if a.after and a.take:
-        base = slides[a.after - 1]
+        base = slides[(a.like or a.after) - 1]
         for i, k in enumerate(int(v) for v in a.take.split(',')):
             ns = clone_slide(prs, base)
             clear(ns)

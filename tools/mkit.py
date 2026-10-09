@@ -11,6 +11,11 @@ number (bottom right). Never draw your own logo, footer or page number.
 
 Safe zones (px):  content x 59..1860, y 190..958 (y 160.. when there is no subtitle).
 Keep y > 965 empty: the logo and footer live there.
+Type floor: nothing below 18 px (9 pt), including labels, chips, badges and source lines.
+
+Export features: <a href> becomes a clickable link; class "strike" or line-through becomes strikethrough;
+data-grp="name" (+ data-rot="-2") groups and rotates shapes; data-anim="1", "2w"... adds entrance steps
+(run tools/group_anim.py after merge_into_template.py). See tools/patterns.py for brochure-style visuals.
 """
 import math, os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -65,14 +70,15 @@ def svg(content):
 
 # ---------------------------------------------------------------- header (template geometry)
 def header(eyebrow, title, sub=None, accent=None, two_line=False):
-    """eyebrow: 1-3 words, shown in caps (section of the story).
+    """eyebrow: 1-3 words, shown in caps (section of the story), or None when the slide does not need one.
     title: the message of the slide, one line (two only when the user asks).
-    accent: optional phrase inside the title to colour teal."""
+    sub: one line of context, only when the slide needs it.
+    accent: phrase inside the title to colour teal; use it wherever a phrase carries the message."""
     t = title
     if accent and accent in t:
         t = t.replace(accent, f'<em>{accent}</em>', 1)
-    o = [f'<div class="eyebrow">{eyebrow}</div>',
-         f'<h1 class="title{" t2" if two_line else ""}"><span>{t}</span></h1>']
+    o = ([f'<div class="eyebrow">{eyebrow}</div>'] if eyebrow else []) + \
+        [f'<h1 class="title{" t2" if two_line else ""}"><span>{t}</span></h1>']
     if sub:
         o.append(f'<p class="sub{" s2" if two_line else ""}">{sub}</p>')
     return '\n'.join(o)
@@ -82,9 +88,44 @@ def banner(x, y, w, h, ic, label, msg='', fs=21):
     """Takeaway band (dark Leaf strip). Order is always: icon, then the label, then the message."""
     m = f'<span style="font-size:{fs}px;white-space:normal;margin-left:10px">{msg}</span>' if msg else ''
     return (f'<div class="band" style="left:{x}px;top:{y}px;width:{w}px;height:{h}px;padding:0 30px;gap:16px">'
-            f'{icon(ic, 30, PULSE)}<span class="lbl" style="color:var(--pulse);font-size:16px">{label}</span>{m}</div>')
+            f'{icon(ic, 30, PULSE)}<span class="lbl" style="color:var(--pulse);font-size:18px">{label}</span>{m}</div>')
 
-def dot_list(items, size=19, gap=10, color=None):
+def band_items(x, y, w, h, ic, label, items, fs=21):
+    """Band with a label and separate items, each with its own icon, split by thin divider lines.
+    Use this instead of joining items with dots or bullets (the owner reads separator dots as AI slop).
+    items: [(icon, text), ...]"""
+    o = [f'<div class="band" style="left:{x}px;top:{y}px;width:{w}px;height:{h}px;padding:0 30px;gap:16px">'
+         f'{icon(ic, 30, PULSE)}<span class="lbl" style="color:var(--pulse);font-size:18px">{label}</span>']
+    for i, (iic, t) in enumerate(items):
+        if i:
+            o.append('<span style="width:1.5px;height:34px;background:rgba(210,240,198,.35);flex:none;margin:0 6px"></span>')
+        o.append(f'<span style="display:flex;align-items:center;gap:10px;font-size:{fs}px;color:#fff;margin-left:{6 if i else 18}px">'
+                 f'{icon(iic, 26, MINT)}<span>{t}</span></span>')
+    return ''.join(o) + '</div>'
+
+def link(url, text):
+    """Hyperlinked text (exports as a clickable PowerPoint link, underlined, in the surrounding colour)."""
+    return f'<a href="{url}">{text}</a>'
+
+def sources_line(x, y, items, w=1800, prefix='Sources: '):
+    """Source line with every source linked. items: [(label, url), ...]. Labels name the source only, no
+    dates ("Gartner predictions", "Fiserv Investor Day"); the link carries the detail. For several sources on
+    one slide, put superscripts on the claims and here: [('¹ Fiserv Investor Day', url), ...]."""
+    body = '; '.join(link(u, t) if u else t for t, u in items)
+    return f'<div class="src" style="left:{x}px;top:{y}px;width:{w}px">{prefix}{body}</div>'
+
+def metric_list(items):
+    """'What it moves': metrics with their direction, as a two-column list (instead of pills).
+    items: [('up' | 'down', text), ...]"""
+    cells = ''.join(f'<div class="mv"><span class="mva">{"&#8593;" if d == "up" else "&#8595;"}</span><span>{t}</span></div>' for d, t in items)
+    return f'<div class="mvg">{cells}</div>'
+
+def badge(letter, v='dk', size=42):
+    """Small square theme badge (A, B, C). v: dk (moss with pulse letter) or pu (pulse with moss letter)."""
+    return (f'<span class="thb {v}" style="width:{size}px;height:{size}px;font-size:{size // 2}px;line-height:{size}px;'
+            f'border-radius:{max(6, size // 4)}px">{letter}</span>')
+
+def dot_list(items, size=20, gap=10, color=None):
     """Bulleted list with teal dots. Use this instead of <ul>/<li>: list markers are lost in the PPTX export."""
     c = f';color:{color}' if color else ''
     return ''.join(f'<div class="sli" style="font-size:{size}px;margin-bottom:{gap}px{c}"><span class="dot"></span><span>{t}</span></div>'
@@ -99,7 +140,7 @@ def legend(x, y, items):
     """Ownership key, e.g. legend(59, 206, [('dk', 'Myridius'), ('lt', 'Client and partners')])."""
     parts = ''.join(f'<span style="display:flex;align-items:center;gap:8px"><span class="sw {k}"></span>{t}</span>' for k, t in items)
     return (f'<div style="left:{x}px;top:{y}px;display:flex;align-items:center;gap:22px;'
-            f'font:400 16px/1 var(--f);color:var(--slate)">{parts}</div>')
+            f'font:400 18px/1 var(--f);color:var(--slate)">{parts}</div>')
 
 # ---------------------------------------------------------------- geometry helpers
 def arc_c(cx, cy, r, t0, t1):
@@ -193,9 +234,9 @@ h1.title.t2{white-space:normal}
 .panel{border-radius:18px;background:var(--moss)}
 .band{border-radius:14px;background:var(--leaf);display:flex;align-items:center;gap:16px;padding:0 26px;font:400 20px/1.35 var(--f);color:var(--mint)}
 .band b{color:#fff}
-.chip{display:inline-flex;align-items:center;gap:8px;border-radius:999px;background:var(--mint);padding:7px 14px;font:600 17px/1 var(--f);color:var(--moss);white-space:nowrap}
+.chip{display:inline-flex;align-items:center;gap:8px;border-radius:999px;background:var(--mint);padding:7px 14px;font:600 18px/1 var(--f);color:var(--moss);white-space:nowrap}
 .chip.ol{background:#fff;border:1.5px solid var(--m16)}
-.tag{display:inline-block;border-radius:999px;padding:6px 12px;font:700 15px/1 var(--f);letter-spacing:.1em;text-transform:uppercase;background:var(--pulse);color:var(--moss)}
+.tag{display:inline-block;border-radius:999px;padding:6px 12px;font:700 18px/1 var(--f);letter-spacing:.1em;text-transform:uppercase;background:var(--pulse);color:var(--moss)}
 .num{width:44px;height:44px;border-radius:50%;border:2px solid var(--moss);display:flex;align-items:center;justify-content:center;font:700 20px/1 var(--f);color:var(--moss);background:#fff}
 .tick{display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;font:400 20px/1.4 var(--f);color:var(--leaf)}
 .tick svg{margin-top:4px}
@@ -205,6 +246,16 @@ h1.title.t2{white-space:normal}
 .sw.dk{background:var(--moss)} .sw.lt{background:var(--m04);border:1.5px solid var(--m16)}
 .sw>*,.band>*{position:static}
 .arct{font-family:var(--f);font-weight:700;letter-spacing:5px}
+/* links, strike, sources, metrics, badges */
+a{color:inherit;text-decoration:underline}
+.strike{text-decoration:line-through}
+.src{font:400 18px/1.35 var(--f);color:var(--slate)}
+.src a{color:var(--slate)}
+.mvg{display:grid;grid-template-columns:1fr 1fr;column-gap:22px;row-gap:12px}
+.mv{display:flex;align-items:center;gap:10px;font:600 19px/1.25 var(--f);color:var(--leaf)}
+.mva{width:28px;height:28px;border-radius:8px;background:var(--mint);color:var(--leaf);font:700 18px/28px var(--f);text-align:center;flex:none;display:inline-block}
+.thb{display:inline-block;text-align:center;flex:none;font-family:var(--f);font-weight:700}
+.thb.dk{background:var(--moss);color:var(--pulse)} .thb.pu{background:var(--pulse);color:var(--moss)}
 '''
 
 JS = r'''

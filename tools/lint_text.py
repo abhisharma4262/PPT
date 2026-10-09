@@ -4,14 +4,16 @@ lint_text: checks every slide for the things the deck owner has had to fix by ha
   python3 lint_text.py deck.pptx        (or deck.html)
   python3 lint_text.py deck.pptx --no-stats    also flags percentages and statistics
 
-ERRORS (must fix): em dash, en dash used as punctuation, double hyphen, emoji, exclamation mark.
-WARNINGS (review): AI-sounding words and constructions, arrogant phrasing, long titles.
+ERRORS (must fix): em dash, en dash used as punctuation, double hyphen, emoji, exclamation mark,
+                   dots or bullets used to separate items in a line ("A · B · C").
+WARNINGS (review): AI-sounding words and constructions, arrogant phrasing, long titles, text below 9 pt.
 Exit code 1 when any error is found.
 """
 import re, sys, html as htmlmod
 
 ERR = [
     (r'\u2014', 'em dash: rewrite with ";" "," ":" or two sentences'),
+    (r'\s[\u00b7\u2022]\s', 'dot or bullet used as a separator: use separate items (mkit band_items) or rewrite'),
     (r'\s\u2013\s', 'en dash used as a dash: rewrite with ";" or ","'),
     (r'(?<!-)--(?!-)', 'double hyphen used as a dash'),
     (r'[\U0001F300-\U0001FAFF☀-➿]', 'emoji'),
@@ -42,16 +44,22 @@ def slides_from_pptx(path):
     for s in prs.slides:
         texts = []
         title = ''
+        small = []
         for sh in walk(s.shapes):
             if sh.has_text_frame and sh.text_frame.text.strip():
                 t = sh.text_frame.text
                 if '©' in t:
                     continue
                 texts.append(t)
+                if not sh.is_placeholder:
+                    for p in sh.text_frame.paragraphs:
+                        for r in p.runs:
+                            if r.font.size and r.font.size.pt < 9 and r.text.strip():
+                                small.append(f'{r.font.size.pt:g} pt: {r.text.strip()[:40]}')
                 sz = [r.font.size.pt for p in sh.text_frame.paragraphs for r in p.runs if r.font.size]
                 if sz and max(sz) >= 24 and (sh.top or 0) < 914400:
                     title = t
-        out.append((title, texts))
+        out.append((title, texts, small))
     return out
 
 def slides_from_html(path):
@@ -63,7 +71,7 @@ def slides_from_html(path):
         m = re.search(r'<h1 class="title[^"]*">(.*?)</h1>', sec, flags=re.S)
         title = htmlmod.unescape(re.sub(r'<[^>]+>', '', m.group(1))) if m else ''
         txt = htmlmod.unescape(re.sub(r'<[^>]+>', '\n', sec))
-        out.append((title, [t for t in txt.split('\n') if t.strip()]))
+        out.append((title, [t for t in txt.split('\n') if t.strip()], []))
     return out
 
 def main():
@@ -71,8 +79,10 @@ def main():
     no_stats = '--no-stats' in sys.argv
     slides = slides_from_pptx(path) if path.lower().endswith('.pptx') else slides_from_html(path)
     errors = 0
-    for i, (title, texts) in enumerate(slides, 1):
+    for i, (title, texts, small) in enumerate(slides, 1):
         found = []
+        for sm in small[:6]:
+            found.append(('warn', 'text below the 9 pt floor', sm))
         for t in texts:
             for pat, msg in ERR:
                 for m in re.finditer(pat, t):

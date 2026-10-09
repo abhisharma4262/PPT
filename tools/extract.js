@@ -114,7 +114,9 @@
     // ---------- text ----------
     function fontOf(cs) {
       const w = parseInt(cs.fontWeight);
-      return { face: w >= 650 ? 'Segoe UI' : (w >= 550 ? 'Segoe UI Semibold' : 'Segoe UI'), bold: w >= 650 };
+      // Segoe UI family on Windows: Light (300), Semilight (350), Regular, Semibold (600), Bold
+      const face = w >= 650 ? 'Segoe UI' : w >= 550 ? 'Segoe UI Semibold' : w <= 320 ? 'Segoe UI Light' : w <= 380 ? 'Segoe UI Semilight' : 'Segoe UI';
+      return { face, bold: w >= 650 };
     }
     const consumed = new Set();
     function collectRuns(el, runs, nodes, hl) {
@@ -127,8 +129,11 @@
           const c = parseColor(cs.color) || { hex: '000000', a: 1 };
           if (cs.textTransform === 'uppercase') t = t.toUpperCase();
           const f = fontOf(cs);
+          const lk = n.parentElement.closest('a[href]');
+          const strike = (cs.textDecorationLine || '').includes('line-through') || !!n.parentElement.closest('.strike');
           runs.push({ text: t, face: f.face, bold: f.bold, italic: cs.fontStyle === 'italic', size: px(cs.fontSize),
-            color: c.hex, alpha: c.a * effOpacity(n.parentElement), spacing: cs.letterSpacing === 'normal' ? 0 : px(cs.letterSpacing), hl });
+            color: c.hex, alpha: c.a * effOpacity(n.parentElement), spacing: cs.letterSpacing === 'normal' ? 0 : px(cs.letterSpacing), hl,
+            link: lk ? lk.getAttribute('href') : null, strike, underline: (cs.textDecorationLine || '').includes('underline') });
           nodes.push(n);
         } else if (n.nodeType === 1) {
           if (n.tagName === 'BR') { runs.push({ br: true }); continue; }
@@ -236,6 +241,12 @@
           if (tag === 'defs' || tag === 'marker') continue;
           const cs = getComputedStyle(el);
           if (cs.display === 'none') continue;
+          const st = items.length;
+          try { walkOne(el, tag, cs); } finally { tagFrom(st, el); }
+        }
+      };
+      const walkOne = (el, tag, cs) => {
+        {
           if (tag === 'g') {
             if (el.getAttribute('transform')) {
               // a placed icon: rebuild as a standalone 24x24 svg
@@ -246,7 +257,7 @@
               const wrap = `<svg xmlns="http://www.w3.org/2000/svg" width="${24 * s}" height="${24 * s}" viewBox="0 0 24 24">${serializer.serializeToString(g)}</svg>`;
               items.push({ t: 'img', x: X, y: Y, w: 24 * s, h: 24 * s, svg: wrap });
             } else walk(el);
-            continue;
+            return;
           }
           if (tag === 'circle') {
             const cx = +el.getAttribute('cx'), cy = +el.getAttribute('cy'), r = +el.getAttribute('r');
@@ -260,9 +271,9 @@
             const pts = el.getAttribute('points').trim().split(/\s+/).map(p => p.split(',').map(Number));
             emitGeom(el, [{ c: 'M', p: pts[0] }, ...pts.slice(1).map(p => ({ c: 'L', p })), { c: 'Z' }]);
           } else if (tag === 'path') {
-            if (!el.getAttribute('d')) continue;
+            if (!el.getAttribute('d')) return;
             const pt = paint(el);
-            if (!pt.fill && !pt.stroke) continue;
+            if (!pt.fill && !pt.stroke) return;
             emitGeom(el, parsePath(el.getAttribute('d')));
           } else if (tag === 'text') {
             const tcs = getComputedStyle(el);
@@ -291,19 +302,36 @@
       walk(svg);
     }
 
+    // ---------- group tags: data-grp (rotation group, optional data-rot) and data-anim (entrance step) ----------
+    function gname(el) {
+      if (!el || !el.closest) return '';
+      const g = el.closest('[data-grp]'), a = el.closest('[data-anim]');
+      let s = '';
+      if (g) s += 'g:' + g.getAttribute('data-grp') + (g.getAttribute('data-rot') ? '@' + g.getAttribute('data-rot') : '');
+      if (a) s += (s ? '|' : '') + 'a:' + a.getAttribute('data-anim');
+      return s;
+    }
+    function tagFrom(st, el) {
+      const g = gname(el);
+      if (!g) return;
+      for (let k = st; k < items.length; k++) if (!items[k].gn) items[k].gn = g;
+    }
+
     // ---------- traversal ----------
     function visit(el) {
       const cs = getComputedStyle(el);
       if (cs.display === 'none' || cs.visibility === 'hidden') return;
       if (el.classList && el.classList.contains('tpl')) return;   // preview-only template furniture
-      if (el.tagName === 'IMG') { const r = el.getBoundingClientRect(); const rr = radii(el, cs, r); items.push({ t: 'photo', src: el.getAttribute('src'), radius: Math.max(...rr), ...rel(r) }); return; }
+      const st = items.length;
+      if (el.tagName === 'IMG') { const r = el.getBoundingClientRect(); const rr = radii(el, cs, r); items.push({ t: 'photo', src: el.getAttribute('src'), radius: Math.max(...rr), ...rel(r) }); tagFrom(st, el); return; }
       if (el.tagName.toLowerCase() === 'svg') {
-        if (el.classList.contains('abs')) handleSvgOverlay(el); else iconSvg(el);
+        if (el.classList.contains('abs')) handleSvgOverlay(el); else { iconSvg(el); tagFrom(st, el); }
         return;
       }
       if (el !== slide) emitBox(el, cs, effOpacity(el));
       emitPseudo(el);
       if (hasDirectText(el)) emitText(el, cs);
+      tagFrom(st, el);
       for (const c of el.children) if (!consumed.has(c)) visit(c);
     }
     visit(slide);

@@ -1,5 +1,6 @@
 """
 Example: four common Myridius slide patterns built with mkit, then exported and merged into the template.
+See patterns_demo.py for the brochure-style visuals, links, rotated groups and entrance animation.
 
   cd examples
   python3 example_deck.py                                  # writes example.html
@@ -98,8 +99,10 @@ def s_process():
     for gx, lab in ((x0 + w + 9, 'Human sign-off'), (x0 + 2 * (w + 18) - 9, 'Human sign-off')):
         o.append(f'<span class="tag" style="left:{gx-80:.0f}px;top:{y0-22}px">{lab}</span>')
     o.insert(1, svg(''.join(s)))   # backgrounds go beneath the HTML text
-    o.append(banner(59, 600, 1801, 84, 'shield', 'Always on',
-                    '<b>Guardrails</b> hard limits  \u00b7  <b>Evals</b> every output scored  \u00b7  <b>Human gates</b> people sign off  \u00b7  <b>Audit trail</b> every step recorded'))
+    # separate items with icons and thin dividers; never join items with dots
+    o.append(band_items(59, 600, 1801, 84, 'shield', 'Always on',
+                        [('shield', 'Guardrails: hard limits'), ('evals', 'Evals: every output scored'),
+                         ('users', 'Human gates: people sign off'), ('doc', 'Audit trail: every step')], fs=19))
     outs = [('parity', 'Business rules proven at parity'), ('shield', 'Client standards enforced at every gate'), ('book', 'Evidence ready for audit')]
     o.append('<div class="lbl" style="left:59px;top:732px">What it drives</div>')
     for i, (ic, t) in enumerate(outs):
@@ -108,8 +111,7 @@ def s_process():
 
 # ------------------------------------------------------------------ 4. client stories (the deck owner's caselet template)
 def s_caselets():
-    o = [header('Client stories (1/2)', 'We have built AI knowledge assistants at enterprise scale',
-                'Selected engagements relevant to this client', accent='at enterprise scale')]
+    o = [header('Client stories (1/2)', 'We have built AI knowledge assistants at enterprise scale', accent='at enterprise scale')]
     cases = [dict(client='Multinational financial services company', name='Knowledge Assistant', icon='book',
                   situation='Client advisors ran <b>millions of searches a year</b> across policy and procedure documents',
                   solution=['Generative AI assistant for <b>advisor questions</b>', 'Answers to <b>complex policy queries</b>', '<b>Faster ramp-up</b> for new joiners'],
@@ -138,8 +140,8 @@ def s_caselets():
                  f'<div style="margin-top:16px">{dot_list(c["solution"], 18)}</div></div></div>')
         outs = ''.join(f'<div class="oline">{icon("check", 20, PULSE)}<span>{t}</span></div>' for t in c['outcomes'])
         o.append(f'<div class="outbox" style="left:{x:.0f}px;top:704px;width:{cw:.0f}px;height:150px"><div class="flow" style="left:22px;top:18px;right:18px">{outs}</div></div>')
-        o.append(f'<div style="left:{x:.0f}px;top:872px;width:{cw:.0f}px;display:flex;gap:8px;flex-wrap:wrap">'
-                 + ''.join(f'<span class="chip" style="font-size:15px;padding:6px 12px">{t}</span>' for t in c['tags']) + '</div>')
+        rel = ', '.join(f'<b style="color:var(--teal)">{t.split(" ", 1)[0]}</b> {t.split(" ", 1)[1]}' for t in c['tags'])
+        o.append(f'<div style="left:{x:.0f}px;top:872px;width:{cw:.0f}px;font:400 18px/1.35 var(--f);color:var(--slate)">Related: {rel}</div>')
     return '\n'.join(o)
 
 EXTRA = r'''
@@ -157,7 +159,7 @@ EXTRA = r'''
 .card.dk .blk .big{color:#fff}
 .blk .txt{font:400 21px/1.4 var(--f);color:var(--leaf);margin-top:8px}
 .card.dk .blk .txt{color:#fff}
-.lbl{font-size:17px}
+.lbl{font-size:18px}
 .rowband{border-radius:12px;background:rgba(12,34,38,.05)}
 .cell{border-radius:10px;background:var(--m04);display:flex;align-items:center;padding:0 20px;font:400 20px/1.35 var(--f);color:var(--leaf)}
 .cell.dk{background:var(--leaf);color:#fff}
@@ -168,7 +170,7 @@ EXTRA = r'''
 .band{font-size:21px;gap:14px}
 .band span{white-space:nowrap}
 .flow{position:absolute} .flow *{position:static}
-.rl{font:700 16px/1.3 var(--f);letter-spacing:.1em;text-transform:uppercase;color:var(--slate)}
+.rl{font:700 18px/1.3 var(--f);letter-spacing:.08em;text-transform:uppercase;color:var(--slate)}
 .cname{font:italic 400 19px/1.3 var(--f);color:var(--slate)}
 .ctext{font:400 19px/1.45 var(--f);color:var(--leaf)}
 .solbox{border-radius:14px;background:var(--m04);border:1.5px solid var(--m10)}
